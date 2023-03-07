@@ -1,0 +1,22 @@
+{
+	"TCP": {
+		"Stop and Wait": {
+			"PORT": 1234,
+			"BUFFER_SIZE": 65535
+		},
+		"Streaming": {
+			"PORT": 1235,
+			"BUFFER_SIZE": 65535
+		}
+	},
+	"UDP": {
+		"Stop and Wait": {
+			"PORT": 1236,
+			"BUFFER_SIZE": 6553
+		},
+		"Streaming": {
+			"PORT": 1237,
+			"BUFFER_SIZE": 6553
+		}
+	}
+}
