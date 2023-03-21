@@ -1,9 +1,16 @@
 import socket
 import time
 from utils.json_utils import read_json_file
+from utils.generate_file import delete_file, create_file
+import sys
+
+sys.set_int_max_str_digits(0)
 
 
-def get_data():
+def get_data(message_size):
+    delete_file("data/data.txt")
+    create_file("data/data.txt", message_size)
+
     with open("data/data.txt", "r") as f:
         data = f.read()
 
@@ -17,7 +24,7 @@ def get_input():
     protocol = input("Choose a protocol (TCP or UDP): ")
     method = input("Choose a method (Stop and Wait or Streaming): ")
     message_size = input(
-        "The size of your message (1MB, 10MB, 50MB, 100MB, 500MB, 1GB): "
+        "The size of your message (1MB, 10MB, 50MB, 100MB, 500MB, 1GB, 2GB): "
     )
 
     return config, common_config, protocol, method, message_size
@@ -32,10 +39,7 @@ def get_methods_dictionary():
     return methods
 
 
-def print_report(response, protocol, number, bytes_sent, time_elapsed):
-    if len(response) > 0:
-        print(f"Decoded response: {response}\n")
-
+def print_report(protocol, number, bytes_sent, time_elapsed):
     print(
         f"Used Protocol: {protocol}\n"
         + f"Number of messages: {number}\n"
@@ -50,44 +54,34 @@ def TCP_Stop_and_Wait(config, common_config, message_size):
     BUFFER_SIZE = config["BUFFER_SIZE"]
     MESSAGE_SIZE = common_config["MESSAGE_SIZE"][message_size]
 
-    start_time, end_time = 0, 0
-
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((HOST, PORT))
 
-    client_socket.send(MESSAGE_SIZE.to_bytes(8, byteorder="big"))
-
-    data = get_data()
+    data = get_data(MESSAGE_SIZE)
 
     start_time = time.time()
+    actually_sent, message_count = 0, 0
 
-    sent_bytes, number_of_messages = 0, 0
+    while actually_sent < MESSAGE_SIZE:
+        to_send = min(BUFFER_SIZE, MESSAGE_SIZE - actually_sent)
+        client_socket.send(data[actually_sent : actually_sent + to_send])
+        actually_sent += to_send
+        message_count += 1
 
-    try:
-        while sent_bytes < MESSAGE_SIZE:
-            bytes_to_send = min(BUFFER_SIZE, MESSAGE_SIZE - sent_bytes)
-            client_socket.send(data[sent_bytes : sent_bytes + bytes_to_send])
-            sent_bytes += bytes_to_send
-            number_of_messages += 1
+        response = client_socket.recv(BUFFER_SIZE)
 
+        while response != b"OK":
+            client_socket.send(data[actually_sent - to_send : actually_sent])
             response = client_socket.recv(BUFFER_SIZE)
+            message_count += 1
 
-            while response != b"OK":
-                client_socket.send(data[sent_bytes - bytes_to_send : sent_bytes])
-                response = client_socket.recv(BUFFER_SIZE)
-    except ConnectionResetError:
-        pass
-    finally:
-        end_time = time.time()
-
-        print_report(
-            "",
-            "TCP - Stop and Wait",
-            number_of_messages,
-            sent_bytes,
-            end_time - start_time,
-        )
-
+    end_time = time.time()
+    print_report(
+        "TCP - Streaming",
+        message_count,
+        actually_sent,
+        end_time - start_time,
+    )
     client_socket.close()
 
 
@@ -102,28 +96,23 @@ def TCP_Streaming(config, common_config, message_size):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((HOST, PORT))
 
-    client_socket.send(MESSAGE_SIZE.to_bytes(8, byteorder="big"))
-
-    data = get_data()
+    data = get_data(MESSAGE_SIZE)
 
     start_time = time.time()
 
-    total_sent_bytes, sent_bytes, number_of_messages = 0, 0, 0
+    actually_sent, message_count = 0, 0
 
-    while total_sent_bytes < MESSAGE_SIZE:
-        bytes_to_send = min(BUFFER_SIZE, MESSAGE_SIZE - total_sent_bytes)
-        sent_bytes = client_socket.send(data[sent_bytes : sent_bytes + bytes_to_send])
-        total_sent_bytes += sent_bytes
-        number_of_messages += 1
+    while actually_sent < MESSAGE_SIZE:
+        to_send = min(BUFFER_SIZE, MESSAGE_SIZE - actually_sent)
+        client_socket.sendall(data[actually_sent : actually_sent + to_send])
+        actually_sent += to_send
+        message_count += 1
 
-    response = client_socket.recv(BUFFER_SIZE)
     end_time = time.time()
-
     print_report(
-        response.decode(),
         "TCP - Streaming",
-        number_of_messages,
-        total_sent_bytes,
+        message_count,
+        actually_sent,
         end_time - start_time,
     )
 
@@ -138,32 +127,30 @@ def UDP_Stop_and_Wait(config, common_config, message_size):
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    data = get_data()
+    data = get_data(MESSAGE_SIZE)
 
     start_time = time.time()
 
-    total_sent_bytes, sent_bytes, number_of_messages = 0, 0, 0
-
+    actually_sent, message_count = 0, 0
     for i in range(0, MESSAGE_SIZE, BUFFER_SIZE):
         packet = data[i : i + BUFFER_SIZE]
 
         while True:
-            sent_bytes = client_socket.sendto(packet, (HOST, PORT))
-            total_sent_bytes += sent_bytes
-            number_of_messages += 1
+            client_socket.sendto(packet, (HOST, PORT))
+            actually_sent += len(packet)
+            message_count += 1
             response, _ = client_socket.recvfrom(BUFFER_SIZE)
-            if response == b"ACK":
+
+            if response == b"OK":
                 break
+    client_socket.sendto(b"", (HOST, PORT))
 
     end_time = time.time()
 
-    client_socket.sendto(b"done", (HOST, PORT))
-
     print_report(
-        "",
         "UDP - Stop and Wait",
-        number_of_messages,
-        total_sent_bytes,
+        message_count,
+        actually_sent,
         end_time - start_time,
     )
 
@@ -178,29 +165,24 @@ def UDP_Streaming(config, common_config, message_size):
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    data = get_data()
+    data = get_data(MESSAGE_SIZE)
 
     start_time = time.time()
 
-    number_of_messages, total_sent_bytes, sent_bytes = 0, 0, 0
+    message_count, actually_sent = 0, 0
 
-    for i in range(0, MESSAGE_SIZE, BUFFER_SIZE):
-        packet = data[i : i + BUFFER_SIZE]
-        sent_bytes = client_socket.sendto(packet, (HOST, PORT))
-        number_of_messages += 1
-        total_sent_bytes += sent_bytes
+    while actually_sent < MESSAGE_SIZE:
+        bytes_to_send = min(BUFFER_SIZE, MESSAGE_SIZE - actually_sent)
+        client_socket.sendto(
+            data[actually_sent : actually_sent + bytes_to_send], (HOST, PORT)
+        )
+        actually_sent += bytes_to_send
+        message_count += 1
+    client_socket.sendto(b"", (HOST, PORT))
 
     end_time = time.time()
 
-    client_socket.sendto(b"done", (HOST, PORT))
-
-    print_report(
-        "",
-        "UDP - Streaming",
-        number_of_messages,
-        total_sent_bytes,
-        end_time - start_time,
-    )
+    print_report("UDP - Streaming", message_count, actually_sent, end_time - start_time)
 
     client_socket.close()
 

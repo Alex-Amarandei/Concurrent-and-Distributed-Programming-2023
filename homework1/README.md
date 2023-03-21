@@ -36,8 +36,7 @@ The program can be run on a **Linux** system, or any **Unix**-based Operating Sy
 #### Technologies used:
 
 - **Language:** _Python 3.10_
-- **Operating System:** _macOS Ventura_
-- **IDE: Visual Studio Code**
+- **IDE:** _Visual Studio Code_
 
 #### Modules used:
 
@@ -45,65 +44,117 @@ The program can be run on a **Linux** system, or any **Unix**-based Operating Sy
 - **Time Measurement:** _time_
 - **Configuration:** _JSON_
 - **Data Generation:** _os_
+- **System Configuration:** _sys_
+
+Environments used:
+
+- **Local:** _macOS Ventura_
+- **Cloud:** _EC2 - Amazon Linux with t2 Micro_
 
 ---
 
 ### Files 📑
 
-1. **client.py:** _The client script that allows for:_
-   1. _choosing a protocol between **TCP** or **UDP**_
-   2. _choosing a transfer method between **Stop-and-Wait** and **Streaming**_
-   3. _choosing the amount of data to be sent between **1MB**, **10MB**, **50MB**, **100MB**, **500MB**, **1GB**_
-2. **server.py:** _The server script that allows for:_
-   1. _choosing a protocol between **TCP** or **UDP**_
-   2. _choosing a transfer method between **Stop-and-Wait** and **Streaming**_
+1. **client.py:** The client script that allows for:
+   1. choosing a protocol between **TCP** or **UDP\***
+   2. choosing a transfer method between **Stop-and-Wait** and **Streaming**
+   3. choosing the amount of data to be sent between **1MB**, **10MB**, **50MB**, **100MB**, **500MB**, **1GB**, **2GB**
+2. **server.py:** The server script that allows for:
+   1. choosing a protocol between **TCP** or **UDP**
+   2. choosing a transfer method between **Stop-and-Wait** and **Streaming**
 3. **data:**
-   1. **common_config.json:** _Holds common data, such as **local host** and **message sizes**_
-   2. **config.json:** _Contains **port** and **buffer** **size** information with regards to both the protocol and method used_
-   3. **data.txt:** _The file containing the data to be transferred_
+   1. **common_config.json:** Holds common data, such as **local host** and **message sizes**
+   2. **config.json:** Contains **port** and **buffer** **size** information with regards to both the protocol and method used
+   3. **data.txt:** The file containing the data to be transferred
 4. **utils:**
-   1. **generate_file.py:** _Generates a file of a specified **name** and **size**, comprised of **0** **bytes**_
-   2. **json_utils.py:** _Reads and returns a **JSON** object as a **dictionary**_
+   1. **generate_file.py:** Generates a file of a specified **name** and **size**, comprised of **0** **bytes**
+   2. **json_utils.py:** Reads and returns a **JSON** object as a **dictionary**
 
 ---
 
 ### Measurement Approach 🤔
 
-#### Local Testing
-
 1. Used a stable and reliable network connection for the test
 2. Closed all other programs and processes that may affect network performance during the test
 3. Ran the program multiple times to get an average measurement and reduce the impact of outliers
-4. Used multiple combinations of buffer sizes, message sizes and clients
+4. Used multiple combinations of message sizes and clients
 5. Monitored network traffic during the test to detect any anomalies that may affect the accuracy of the measurements
 
 ---
 
 ### Measurements 📊
 
-| Protocol + Method | TCP + Stop and Wait | Messages | TCP + Streaming | Messages | UDP + Stop and Wait | Messages | UDP + Streaming | Messages |
-| ----------------- | ------------------- | -------- | --------------- | -------- | ------------------- | -------- | --------------- | -------- |
-| 1MB               | 1.00881099          | 23       | 0.00340986      | 17       | 0.04556584          | 161      | 0.03210306      | 161      |
-| 10MB              | 1.02543187          | 208      | 0.11290597      | 161      | 0.173675727         | 1601     | 0.12236189      | 1601     |
-| 50MB              | 1.04338097          | 931      | 2.76955986      | 801      | 0.717549429         | 8001     | 0.5055439       | 8001     |
-| 100MB             | 1.08053302          | 2155     | 10.17102503     | 1601     | 1.555606007         | 16002    | 1.09599018      | 16002    |
-| 500MB             | 1.32335710          | 9525     | 349.042908      | 8001     | 7.802975678         | 80008    | 5.49752616      | 80008    |
-| 1GB               | 1.71180009          | 19068    | 821.764993      | 16002    | 14.33305622         | 163856   | 10.0982439      | 163856   |
-| BUFFER            | 65535               |          | 65535           |          | 6553                |          | 6553            |          |
+<aside>
+💡 TCP - Stop and Wait (Left: Local, Right: EC2) - Averages for 50 runs
+
+</aside>
+
+| Message Size | Buffer Size | Elapsed Time | Number of Messages | Bytes Received | Bytes Sent |     | Elapsed Time | Number of Messages | Bytes Received |
+| ------------ | ----------- | ------------ | ------------------ | -------------- | ---------- | --- | ------------ | ------------------ | -------------- |
+| 1 MB         | 65535       | 0.00512      | 19                 | 1048576        | 1048576    |     | 0.00919      | 16                 | 1048576        |
+| 50 MB        | 65535       | 0.02982      | 955                | 53116907       | 52428800   |     | 0.07425      | 822                | 53116907       |
+| 100 MB       | 65535       | 0.16104      | 1618               | 106004445      | 104857600  |     | 0.19173      | 1621               | 106135513      |
+| 1 GB         | 65535       | 1.51906      | 16486              | 1087372896     | 1073741824 |     | 1.75259      | 16703              | 1104313435     |
+| 2 GB         | 65535       | 3.01172      | 34294              | 2204989733     | 2147483648 |     | 3.43012      | 33489              | 2178612298     |
+
+<aside>
+💡 TCP - Streaming (Left: Local, Right: EC2) - Averages for 50 runs
+
+</aside>
+
+| Message Size | Buffer Size | Elapsed Time | Number of Messages | Bytes Received | Bytes Sent |     | Elapsed Time | Number of Messages | Bytes Received |
+| ------------ | ----------- | ------------ | ------------------ | -------------- | ---------- | --- | ------------ | ------------------ | -------------- |
+| 1 MB         | 65535       | 0.00034      | 17                 | 1048576        | 1048576    |     | 0.00101      | 17                 | 1048576        |
+| 50 MB        | 65535       | 0.01825      | 801                | 52428800       | 52428800   |     | 0.01802      | 801                | 52428800       |
+| 100 MB       | 65535       | 0.02417      | 1601               | 104857600      | 104857600  |     | 0.02657      | 1601               | 104857600      |
+| 1 GB         | 65535       | 0.38076      | 16385              | 1073741824     | 1073741824 |     | 0.47534      | 16385              | 1073741824     |
+| 2 GB         | 65535       | 0.76141      | 32769              | 2147483648     | 2147483648 |     | 0.85420      | 32769              | 2147483648     |
+
+<aside>
+💡 UDP - Stop and Wait (Left: Local, Right: EC2) - Averages for 50 runs
+
+</aside>
+
+| Message Size | Buffer Size | Elapsed Time | Number of Messages | Bytes Received | Bytes Sent |     | Elapsed Time | Number of Messages | Bytes Received |
+| ------------ | ----------- | ------------ | ------------------ | -------------- | ---------- | --- | ------------ | ------------------ | -------------- |
+| 1 MB         | 32767       | 0.01133      | 33                 | 1048576        | 1048576    |     | 0.02091      | 33                 | 1048576        |
+| 50 MB        | 32767       | 0.31614      | 1601               | 52428800       | 52428800   |     | 0.31917      | 1601               | 52428800       |
+| 100 MB       | 32767       | 0.52752      | 3201               | 104857600      | 104857600  |     | 0.62540      | 3201               | 104857600      |
+| 1 GB         | 32767       | 6.42834      | 32770              | 1073741824     | 1073741824 |     | 6.44350      | 32770              | 1073741824     |
+| 2 GB         | 32767       | 12.21871     | 65539              | 2147483648     | 2147483648 |     | 13.18978     | 65539              | 2147483648     |
+
+<aside>
+💡 UDP - Streaming (Left: Local, Right: EC2) - Averages for 50 runs
+
+</aside>
+
+| Message Size | Buffer Size | Elapsed Time | Number of Messages | Bytes Received | Bytes Sent |     | Elapsed Time | Number of Messages | Bytes Received |
+| ------------ | ----------- | ------------ | ------------------ | -------------- | ---------- | --- | ------------ | ------------------ | -------------- |
+| 1 MB         | 32767       | 0.00753      | 33                 | 1048576        | 1048576    |     | 0.02796      | 33                 | 1048576        |
+| 50 MB        | 32767       | 0.16489      | 1601               | 52428800       | 52428800   |     | 0.17274      | 1601               | 52428800       |
+| 100 MB       | 32767       | 0.3141       | 3201               | 99811482       | 104857600  |     | 0.31665      | 3201               | 98500802       |
+| 1 GB         | 32767       | 3.14358      | 32770              | 1049297642     | 1073741824 |     | 3.30749      | 32770              | 1062469976     |
+| 2 GB         | 32767       | 6.54604      | 65539              | 2119926601     | 2147483648 |     | 6.63104      | 65539              | 2122875631     |
 
 ---
 
 ### Conclusion 🔚
 
-#### TCP and UDP
+TCP and UDP
 
 1. TCP with stop-and-wait is the least efficient protocol, with the lowest throughput and longest latency. This is because packets are sent one at a time, and the sender must wait for each packet to be acknowledged before sending the next one.
 2. UDP with stop-and-wait can provide moderate throughput, but reliability is also compromised due to the lack of error checking and flow control.
-3. TCP with streaming is generally the most efficient protocol, providing the highest throughput and reliability. This is because TCP uses a sliding window protocol that allows for multiple packets to be sent and acknowledged in parallel, reducing the amount of time that the sender has to wait for acknowledgments. In this specific case, however, there were some inconsistencies.
-4. UDP with streaming can provide high throughput, but reliability may be compromised due to the lack of error checking and flow control.
+3. TCP with streaming is generally the most efficient protocol, providing the highest throughput and reliability. This is because TCP uses a sliding window protocol that allows for multiple packets to be sent and acknowledged in parallel, reducing the amount of time that the sender has to wait for acknowledgments.
+4. UDP with streaming can provide high throughput, but reliability may be compromised due to the lack of error checking and flow control. Noticed significant losses.
 
-#### Buffer and Message Sizes
+Buffer and Message Sizes
 
-In terms of the buffer size and message size, larger buffer sizes generally allow for more efficient data transfer, as they can store more data for processing and transmission. However, large buffer sizes can also lead to higher latency and delay in data transmission. Similarly, larger message sizes can provide higher throughput, but also increase the likelihood of errors and packet loss, especially in networks with high congestion or limited bandwidth.
+In terms of the buffer size and message size, larger buffer sizes generally allow for more efficient data transfer, as they can store more data for processing and transmission. However, large buffer sizes can also lead to higher latency and delay in data transmission. Similarly, larger message sizes can provide higher throughput, but also increase the likelihood of errors and packets loss, especially in networks with high congestion or limited bandwidth.
+
+**Environment**
+
+A Local Wi-Fi, with only one device connected and only this tasks running, seems to provide, empirically, but also logically, the best average performance. However, surprisingly, the performance did not decline as much as it was expected when running the server and client on two dedicated EC2 t2 micro instances.
+
+**Final Thoughts**
 
 All things considered, the proper combination of protocol, transfer method, buffer size and message size can be found by carefully analysing the use-case, but also by means of experimenting and benchmarking, which may reveal some interesting insights.

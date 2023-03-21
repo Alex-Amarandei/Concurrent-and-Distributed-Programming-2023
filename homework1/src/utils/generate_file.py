@@ -13,7 +13,7 @@ def create_file(file_name, size):
 
 def main():
     file_name = input("File name: ")
-    size = int(input("Size: "))
+    size = int(input("Size (in MB): "))
 
     delete_file(file_name)
     create_file(file_name, size)

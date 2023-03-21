@@ -1,6 +1,9 @@
 import socket
 import time
 from utils.json_utils import read_json_file
+import sys
+
+sys.set_int_max_str_digits(0)
 
 
 def init_connection(config, common_config, socket_type):
@@ -60,23 +63,19 @@ def TCP_Stop_and_Wait(config, common_config):
     client_socket, address = server_socket.accept()
     print(f"{address} connected.")
 
-    message_size_bytes = client_socket.recv(BUFFER_SIZE)
-    message_size = int.from_bytes(message_size_bytes, byteorder="big")
-
-    print(f"Receiving message of size {message_size} bytes...")
-
-    received_bytes, num_messages = 0, 0
-
-    while received_bytes < message_size:
+    actually_received = 0
+    message_count = 0
+    while True:
         data = client_socket.recv(BUFFER_SIZE)
-        received_bytes += len(data)
-        num_messages += 1
+        actually_received += len(data)
+        message_count += 1
 
-        client_socket.send(b"ACK")
+        client_socket.send(b"OK")
 
-    print_report("TCP - Stop and Wait", num_messages, received_bytes)
+        if not data:
+            break
 
-    client_socket.send(b"Message received.")
+    print_report("TCP - Stop-Wait", message_count, actually_received)
 
     close_connection(server_socket)
 
@@ -88,27 +87,16 @@ def TCP_Streaming(config, common_config):
     client_socket, address = server_socket.accept()
     print(f"{address} connected.")
 
-    while True:
-        message_size_bytes = client_socket.recv(8)
+    actually_received, message_count = 0, 0
 
-        if not message_size_bytes:
+    while True:
+        data = client_socket.recv(BUFFER_SIZE)
+        actually_received += len(data)
+        message_count += 1
+        if not data:
             break
 
-        message_size = int.from_bytes(message_size_bytes, byteorder="big")
-
-        received_bytes, num_messages = 0, 0
-
-        message = b""
-
-        while received_bytes < message_size:
-            data = client_socket.recv(BUFFER_SIZE)
-            message += data
-            received_bytes += len(data)
-            num_messages += 1
-
-        print_report("TCP - Streaming", num_messages, received_bytes)
-
-        client_socket.send(b"Message received.")
+    print_report("TCP - Streaming", message_count, actually_received)
 
     close_connection(server_socket)
 
@@ -117,22 +105,20 @@ def UDP_Stop_and_Wait(config, common_config):
     BUFFER_SIZE = config["BUFFER_SIZE"]
     server_socket = init_connection(config, common_config, socket.SOCK_DGRAM)
 
-    received_bytes, num_messages, done = 0, 0, False
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1000000)
 
-    while not done:
-        data, address = server_socket.recvfrom(BUFFER_SIZE)
-        received_bytes += len(data)
-        num_messages += 1
+    actually_received, message_count = 0, 0
+    while True:
+        data, client_address = server_socket.recvfrom(BUFFER_SIZE)
+        actually_received += len(data)
+        message_count += 1
 
-        server_socket.sendto(b"ACK", address)
+        server_socket.sendto(b"OK", client_address)
 
         if not data:
             break
 
-        if data == b"done":
-            done = True
-
-    print_report("UDP - Stop and Wait", num_messages, received_bytes)
+    print_report("UDP - Stop and Wait", message_count, actually_received)
 
     close_connection(server_socket)
 
@@ -143,22 +129,19 @@ def UDP_Streaming(config, common_config):
 
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1000000)
 
-    received_bytes, num_messages, done = 0, 0, False
-
-    while not done:
-        data, address = server_socket.recvfrom(BUFFER_SIZE)
-        received_bytes += len(data)
-        num_messages += 1
-
+    actually_received, message_count = 0, 0
+    while True:
+        data, _ = server_socket.recvfrom(BUFFER_SIZE)
+        actually_received += len(data)
+        message_count += 1
         if not data:
             break
 
-        if data == b"done":
-            done = True
-
-        server_socket.sendto(b"ack", address)
-
-    print_report("UDP - Streaming", num_messages, received_bytes)
+    print_report(
+        "UDP - Streaming",
+        message_count,
+        actually_received,
+    )
 
     close_connection(server_socket)
 
